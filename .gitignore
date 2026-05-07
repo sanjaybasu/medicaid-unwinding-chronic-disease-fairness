@@ -1,0 +1,12 @@
+data/raw/
+data/clean/
+*.pyc
+__pycache__/
+.venv/
+.pytest_cache/
+.ipynb_checkpoints/
+*.log
+.DS_Store
+.Rhistory
+.RData
+.Rproj.user/
