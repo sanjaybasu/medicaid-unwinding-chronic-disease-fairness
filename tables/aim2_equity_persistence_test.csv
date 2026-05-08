@@ -1,0 +1,3 @@
+model,sens_diff_full_black_minus_white,sens_diff_retained_black_minus_white,sens_diff_disenrolled_black_minus_white
+signal_retrained,-0.014953285653922621,-0.018262653898768855,-0.07276119402985076
+cost_based,0.009530665581620967,-0.008755129958960328,0.10927505330490406
