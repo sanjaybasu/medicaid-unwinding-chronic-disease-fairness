@@ -73,9 +73,58 @@ def synthetic_meps() -> pd.DataFrame:
     return df
 
 
+@pytest.fixture(scope="session")
+def synthetic_individual_panel() -> pd.DataFrame:
+    rng = np.random.default_rng(42)
+    n = 8000
+    races = ["nh_white", "nh_black", "hispanic", "nh_asian", "nh_aian", "multiracial"]
+    languages = ["english", "spanish", "other"]
+    df = pd.DataFrame({
+        "member_id": [f"M{i:06d}" for i in range(n)],
+        "x_age": rng.integers(19, 65, n),
+        "x_sex": rng.choice([0, 1], n),
+        "x_baseline_visits": rng.poisson(3, n),
+        "x_baseline_admits": rng.poisson(0.4, n),
+        "x_baseline_signal": rng.beta(2, 8, n),
+        "x_chronic_count": rng.poisson(1.2, n),
+        "x_adi_decile": rng.integers(1, 11, n),
+        "race_ethnicity": rng.choice(races, n, p=[0.4, 0.2, 0.25, 0.08, 0.02, 0.05]),
+        "primary_language": rng.choice(languages, n, p=[0.75, 0.18, 0.07]),
+        "adl_disability": rng.random(n) < 0.12,
+        "urbanicity": rng.choice(["metro", "non_metro"], n, p=[0.85, 0.15]),
+    })
+    propensity = 1 / (1 + np.exp(-(0.5 * df["x_chronic_count"] - 0.3 * df["x_age"] / 50 + rng.normal(0, 0.5, n))))
+    df["procedural_disenrolled"] = (rng.random(n) < propensity).astype(int)
+    treatment_effect = 0.4
+    df["all_cause_mortality_12mo"] = (
+        rng.random(n) < (0.02 + treatment_effect * 0.05 * df["procedural_disenrolled"])
+    ).astype(int)
+    df["acs_admit_rate_per_year"] = (
+        0.3 * df["x_chronic_count"]
+        + treatment_effect * 0.5 * df["procedural_disenrolled"]
+        + rng.normal(0, 0.2, n)
+    )
+    df["ed_visit_rate_per_year"] = (
+        0.5 + 0.3 * df["x_chronic_count"]
+        + treatment_effect * 0.6 * df["procedural_disenrolled"]
+        + rng.normal(0, 0.3, n)
+    )
+    df["hba1c_change_12mo"] = (
+        treatment_effect * 0.4 * df["procedural_disenrolled"]
+        + rng.normal(0, 0.5, n)
+    )
+    df["sbp_change_12mo"] = (
+        treatment_effect * 2.0 * df["procedural_disenrolled"]
+        + rng.normal(0, 3.0, n)
+    )
+    df["signal_score_baseline"] = df["x_baseline_signal"]
+    return df
+
+
 @pytest.fixture(autouse=True)
-def write_synthetic_panel_to_clean(synthetic_state_quarter_panel, synthetic_meps):
+def write_synthetic_panel_to_clean(synthetic_state_quarter_panel, synthetic_meps, synthetic_individual_panel):
     DATA_CLEAN.mkdir(parents=True, exist_ok=True)
     synthetic_state_quarter_panel.to_parquet(DATA_CLEAN / "state_quarter_panel.parquet", index=False)
     synthetic_meps.to_parquet(DATA_CLEAN / "meps_hc_medicaid_pooled.parquet", index=False)
+    synthetic_individual_panel.to_parquet(DATA_CLEAN / "waymark_individual_panel.parquet", index=False)
     yield
