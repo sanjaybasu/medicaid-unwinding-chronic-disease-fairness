@@ -22,7 +22,7 @@ from config import DATA_CLEAN
 
 SIGNAL_VENDORED_DIR = Path(__file__).resolve().parent / "external" / "signal_patel_baum_basu_2024"
 SIGNAL_REPO_URL = "https://github.com/sadiqypatel/Medicaid_Risk_Model"
-SIGNAL_PINNED_COMMIT = "REPLACE_WITH_PINNED_COMMIT_HASH"
+SIGNAL_PINNED_COMMIT = "234a031b6c114d10cefec27ae7e1415811448950"
 SIGNAL_CITATION = "Patel SY, Baum A, Basu S. Sci Rep 14, 824 (2024). DOI 10.1038/s41598-023-51114-z."
 
 PUBLISHED_THRESHOLD_TOP_DECILE = 0.10
@@ -33,16 +33,20 @@ def vendor_or_clone_signal() -> Path:
         return SIGNAL_VENDORED_DIR
     SIGNAL_VENDORED_DIR.parent.mkdir(parents=True, exist_ok=True)
     import subprocess
-    cmd = [
-        "git", "clone", "--depth", "1",
-        SIGNAL_REPO_URL, str(SIGNAL_VENDORED_DIR),
-    ]
     try:
-        subprocess.run(cmd, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "clone", SIGNAL_REPO_URL, str(SIGNAL_VENDORED_DIR)],
+            check=True, capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(SIGNAL_VENDORED_DIR), "checkout", SIGNAL_PINNED_COMMIT],
+            check=True, capture_output=True,
+        )
     except subprocess.CalledProcessError as e:
         raise RuntimeError(
-            f"Could not clone Signal repo: {e.stderr.decode(errors='ignore')}\n"
-            f"Manually clone {SIGNAL_REPO_URL} to {SIGNAL_VENDORED_DIR}"
+            f"Could not vendor Signal repo at pinned commit {SIGNAL_PINNED_COMMIT}: "
+            f"{e.stderr.decode(errors='ignore')}\n"
+            f"Manually clone {SIGNAL_REPO_URL} and checkout {SIGNAL_PINNED_COMMIT} into {SIGNAL_VENDORED_DIR}"
         ) from e
     return SIGNAL_VENDORED_DIR
 
